@@ -7,7 +7,7 @@ const stringKeys = new Set([
     'player'
 ]);
 
-function normalizeEntry([key,value]) {
+function normalizeEntry([key, value]) {
     key = key.toLowerCase();
     const split = key.split('_');
     let keyType;
@@ -25,7 +25,7 @@ function normalizeEntry([key,value]) {
             value = parseInt(value);
         }
     }
-    return [key,value];
+    return [key, value];
 }
 
 class Gamespy1 extends Core {
@@ -36,7 +36,7 @@ class Gamespy1 extends Core {
     }
 
     async run(state) {
-        const raw = await this.sendPacket('\\status\\xserverquery');
+        const raw = await this.sendPacket('\\info\\xserverquery\\\\players\\xserverquery\\\\rules\\xserverquery\\\\teams\\xserverquery\\');
         // Convert all keys to lowercase and normalize value types
         const data = Object.fromEntries(Object.entries(raw).map(entry => normalizeEntry(entry)));
         state.raw = data;
@@ -49,6 +49,7 @@ class Gamespy1 extends Core {
         const teamOffByOne = data.gamename === 'bfield1942';
         const playersById = {};
         const teamNamesById = {};
+        const teamScoresById = {};
         for (const ident of Object.keys(data)) {
             const split = ident.split('_');
             if (split.length !== 2) continue;
@@ -63,8 +64,8 @@ class Gamespy1 extends Core {
                 // Info about a team
                 if (key === 'teamname') {
                     teamNamesById[id] = value;
-                } else {
-                    // other team info which we don't track
+                } else if (key === 'teamscore') {
+                    teamScoresById[id] = value
                 }
             } else {
                 // Info about a player
@@ -83,6 +84,7 @@ class Gamespy1 extends Core {
             }
         }
         state.raw.teams = teamNamesById;
+        state.raw.teamscores = teamScoresById;
 
         const players = Object.values(playersById);
 
@@ -125,7 +127,7 @@ class Gamespy1 extends Core {
             const split = str.split('\\');
             split.shift();
             const data = {};
-            while(split.length) {
+            while (split.length) {
                 const key = split.shift();
                 const value = split.shift() || '';
                 data[key] = value;
@@ -166,7 +168,7 @@ class Gamespy1 extends Core {
             }
 
             this.logger.debug("Received part #" + partNum + " of " + (maxPartNum ? maxPartNum : "?"));
-            for(const i of Object.keys(data)) {
+            for (const i of Object.keys(data)) {
                 output[i] = data[i];
             }
             if (maxPartNum && parts.size === maxPartNum) {
